@@ -7,19 +7,24 @@ def create_board():
     return [["." for _ in range(SIZE)] for _ in range(SIZE)]
 
 
-def place_ships(board):
+def place_ships():
+    """Create a separate board containing only ships."""
+    board = create_board()
+
     # Place the 2-cell ship
     while True:
         direction = random.choice(["H", "V"])
         row = random.randint(0, SIZE - 1)
         col = random.randint(0, SIZE - 1)
 
-        if direction == "H" and col < SIZE - 1:
+        if direction == "H":
+            if col + 1 >= SIZE:
+                continue
             cells = [(row, col), (row, col + 1)]
-        elif direction == "V" and row < SIZE - 1:
-            cells = [(row, col), (row + 1, col)]
         else:
-            continue
+            if row + 1 >= SIZE:
+                continue
+            cells = [(row, col), (row + 1, col)]
 
         for r, c in cells:
             board[r][c] = "S"
@@ -27,38 +32,43 @@ def place_ships(board):
         break
 
     # Place two 1-cell ships
-    ships_placed = 0
+    placed = 0
 
-    while ships_placed < 2:
+    while placed < 2:
         row = random.randint(0, SIZE - 1)
         col = random.randint(0, SIZE - 1)
 
         if board[row][col] == ".":
             board[row][col] = "S"
-            ships_placed += 1
+            placed += 1
+
+    return board
 
 
-def print_board(board, hide_ships=False):
-    print("  1 2 3")
-    for r in range(SIZE):
-        print(r + 1, end=" ")
+def create_shot_board():
+    """Board containing only the player's shots."""
+    return create_board()
 
-        for c in range(SIZE):
-            cell = board[r][c]
 
-            if hide_ships and cell == "S":
-                cell = "."
+def print_board(ships, shots, hide_ships=False):
+    print("    1 2 3")
 
-            print(cell, end=" ")
+    for row in range(SIZE):
+        print(f"{row + 1}   ", end="")
+
+        for col in range(SIZE):
+            # Show shot result first
+            if shots[row][col] == "X":
+                print("X", end=" ")
+            elif shots[row][col] == "O":
+                print("O", end=" ")
+            # Show ships only on your own board
+            elif ships[row][col] == "S" and not hide_ships:
+                print("S", end=" ")
+            else:
+                print(".", end=" ")
 
         print()
-
-
-def all_ships_sunk(board):
-    for row in board:
-        if "S" in row:
-            return False
-    return True
 
 
 def get_shot():
@@ -75,33 +85,50 @@ def get_shot():
             print("Coordinates must be between 1 and 3.")
 
         except ValueError:
-            print("Enter two numbers, for example: 2 3")
+            print("Please enter two numbers, for example: 2 3.")
 
 
-def take_turn(attacker_board):
+def take_turn(enemy_ships, enemy_shots, player_number):
+    """Take shots until the player misses."""
+
     while True:
         row, col = get_shot()
 
         # Don't allow shooting the same cell twice
-        if attacker_board[row][col] in ("X", "O"):
+        if enemy_shots[row][col] != ".":
             print("You already shot there!")
             continue
 
-        if attacker_board[row][col] == "S":
-            attacker_board[row][col] = "X"
-            print("Hit!")
+        # Show exactly where the player is striking
+        print(
+            f"Player {player_number} strikes "
+            f"row {row + 1}, column {col + 1}!"
+        )
 
-            if all_ships_sunk(attacker_board):
+        if enemy_ships[row][col] == "S":
+            enemy_shots[row][col] = "X"
+            print("HIT!")
+
+            if all_ships_sunk(enemy_ships, enemy_shots):
                 return True
 
-            # Hit = another turn
             print("You get another shot!")
-            print_board(attacker_board, hide_ships=True)
 
         else:
-            attacker_board[row][col] = "O"
-            print("Miss!")
+            enemy_shots[row][col] = "O"
+            print("MISS!")
             return False
+
+
+def all_ships_sunk(ships, shots):
+    """Check whether every ship cell has been hit."""
+
+    for row in range(SIZE):
+        for col in range(SIZE):
+            if ships[row][col] == "S" and shots[row][col] != "X":
+                return False
+
+    return True
 
 
 def clear_screen():
@@ -109,50 +136,88 @@ def clear_screen():
 
 
 def main():
-    player1_board = create_board()
-    player2_board = create_board()
+    # Each player has TWO separate boards:
+    #
+    # ships = where their ships actually are
+    # shots = where they have been shot
+    #
+    # This prevents the two boards from interfering with each other.
 
-    place_ships(player1_board)
-    place_ships(player2_board)
+    player1_ships = place_ships()
+    player2_ships = place_ships()
+
+    player1_shots = create_shot_board()
+    player2_shots = create_shot_board()
 
     current_player = 1
 
-    print("=== 3x3 BATTLESHIPS ===")
+    print("================================")
+    print("        3x3 BATTLESHIPS")
+    print("================================")
+    print()
     print("Each player has:")
     print("- 1 ship occupying 2 cells")
     print("- 2 ships occupying 1 cell")
     print()
+    print("X = Hit")
+    print("O = Miss")
+    print("S = Your ship")
+    print()
+
     input("Press Enter to start...")
 
     while True:
         clear_screen()
 
         if current_player == 1:
-            own_board = player1_board
-            enemy_board = player2_board
+            own_ships = player1_ships
+            own_shots = player1_shots
+
+            enemy_ships = player2_ships
+            enemy_shots = player1_shots
+
         else:
-            own_board = player2_board
-            enemy_board = player1_board
+            own_ships = player2_ships
+            own_shots = player2_shots
 
-        print(f"=== Player {current_player}'s Turn ===")
-        print("\nYour board:")
-        print_board(own_board)
+            enemy_ships = player1_ships
+            enemy_shots = player2_shots
 
-        print("\nEnemy board:")
-        print_board(enemy_board, hide_ships=True)
+        print("================================")
+        print(f"        PLAYER {current_player}")
+        print("================================")
 
-        print("\nMake your shot!")
+        print("\nYOUR BOARD:")
+        print_board(own_ships, enemy_shots, hide_ships=False)
 
-        won = take_turn(enemy_board)
+        print("\nENEMY BOARD:")
+        print_board(enemy_ships, own_shots, hide_ships=True)
+
+        print()
+        print(f"Player {current_player}, it's your turn.")
+
+        won = take_turn(enemy_ships, enemy_shots, current_player)
 
         if won:
-            print(f"\n🎉 Player {current_player} wins!")
+            clear_screen()
+
+            print("================================")
+            print(f"      PLAYER {current_player} WINS!")
+            print("================================")
+            print()
+
+            print("Your final board:")
+            print_board(own_ships, enemy_shots)
+
+            print("\nEnemy board:")
+            print_board(enemy_ships, own_shots)
+
             break
 
-        # Miss ends the turn
+        # A miss ends the turn
         current_player = 2 if current_player == 1 else 1
 
-        input("\nPress Enter to continue...")
+        input("\nPress Enter to pass the turn...")
 
 
 main()
