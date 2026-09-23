@@ -13,6 +13,7 @@ class Player:
 
     def round_pass(self):
         self.passed = True
+        minimax_turn()
 
     def turn(self):
         if len(self.hand) <= 0:
@@ -57,8 +58,8 @@ def game_start():
     game_round = 1
 
     # Starting cards
-    players[0].hand = [1, 2, 3, 4, 5]
-    players[1].hand = [1, 2, 3, 4, 5]
+    players[0].hand = [1, 2, 3]
+    players[1].hand = [1, 2, 3]
 
     current_player_index = 0
 
@@ -130,12 +131,14 @@ def round_reset(winner):
     players[1].passed = False
 
     # Give one basic card to each player
-    players[0].hand.append(1)
-    players[1].hand.append(1)
+    print("Each player got a new card")
+    players[0].hand.append(4)
+    players[1].hand.append(4)
 
     # Winner gets one additional card
     if winner is not None:
-        winner.hand.append(1)
+        print("And ", winner.name, "got another one!")
+        winner.hand.append(5)
 
 
 def game_end():
@@ -156,6 +159,21 @@ def game_end():
     else:
         print("The game is a draw!")
 
+
+
+def evaluate_state():
+    return player2.table_score - player1.table_score
+
+
+def minimax(depth, maximizing_player):
+    #алгоритм minimax
+    pass
+
+
+def minimax_turn():
+    #выбирает карту с лучшей оценкой
+    player1.turn()
+    pass
 
 game_start()
 game_end()
